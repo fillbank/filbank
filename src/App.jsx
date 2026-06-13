@@ -2332,6 +2332,69 @@ function App() {
           </div>
         </section>
 
+        <section id="support" className="partners-section" style={{borderTop:'1px solid var(--border)',paddingTop:'60px'}}>
+          <div className="section-header">
+            <h2>{t('support.title')}</h2>
+            <p>{t('support.subtitle')}</p>
+          </div>
+          <div style={{maxWidth:500,margin:'0 auto'}}>
+            <div className="support-goals">
+              <div className="support-goal">
+                <span className="support-goal-label">{t('support.goal1')}</span>
+                <div className="support-goal-progress">
+                  <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'12%'}}></div></div>
+                  <span className="support-goal-amount">12%</span>
+                </div>
+              </div>
+              <div className="support-goal">
+                <span className="support-goal-label">{t('support.goal2')}</span>
+                <div className="support-goal-progress">
+                  <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'5%'}}></div></div>
+                  <span className="support-goal-amount">5%</span>
+                </div>
+              </div>
+              <div className="support-goal">
+                <span className="support-goal-label">{t('support.goal3')}</span>
+                <div className="support-goal-progress">
+                  <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'3%'}}></div></div>
+                  <span className="support-goal-amount">3%</span>
+                </div>
+              </div>
+              <div className="support-goal" style={{borderTop:'1px solid var(--border)',paddingTop:'12px',marginTop:'4px'}}>
+                <span className="support-goal-label">{t('support.totalRaised')}</span>
+                <span className="support-goal-amount">{supportDonations.reduce((s, d) => s + parseFloat(d.amount), 0).toFixed(4)} SOL</span>
+              </div>
+            </div>
+            <div className="support-addresses">
+              <div className="support-address">
+                <div className="support-address-header">
+                  <span className="support-coin">◎ SOL</span>
+                  <span className="support-network">Solana</span>
+                </div>
+                <div className="support-address-row">
+                  <code className="support-address-code">7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF</code>
+                  <button className="support-copy-btn" onClick={() => {navigator.clipboard.writeText('7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF')}}>📋</button>
+                </div>
+              </div>
+              <div className="support-address">
+                <div className="support-address-header">
+                  <span className="support-coin">💵 USDT</span>
+                  <span className="support-network">SPL / TRC20 / ERC20</span>
+                </div>
+                <div className="support-address-row">
+                  <code className="support-address-code">ETkmY37T9tKmwNzxLrNrLh6GdphDEDAB6qWfdywEGf8p</code>
+                  <button className="support-copy-btn" onClick={() => {navigator.clipboard.writeText('ETkmY37T9tKmwNzxLrNrLh6GdphDEDAB6qWfdywEGf8p')}}>📋</button>
+                </div>
+              </div>
+            </div>
+            <div className="support-note">{t('support.note')}</div>
+            <div className="support-social">
+              <a href="https://t.me/FilBankofficial" target="_blank" rel="noopener" className="support-social-btn telegram">📱 {t('support.telegram')}</a>
+              <a href="https://twitter.com/FilBankOfficial" target="_blank" rel="noopener" className="support-social-btn twitter">🐦 {t('support.twitter')}</a>
+            </div>
+          </div>
+        </section>
+
         <section id="faq" className="faq-section">
           <div className="section-header">
             <h2>{t('faq.title')}</h2>

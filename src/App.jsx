@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import { clusterApiUrl, Connection, PublicKey } from '@solana/web3.js'
 import { initializeApp } from 'firebase/app'
-import { getDatabase, ref, set, onValue } from 'firebase/database'
+import { getDatabase, ref, set, onValue, get, child } from 'firebase/database'
 import './App.css'
 
 const firebaseConfig = {
@@ -1553,28 +1553,33 @@ function AuthModal({ mode, onClose, onSwitch, onAuth, t }) {
   const [confirm, setConfirm] = useState('')
   const [country, setCountry] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h = h & h } return h.toString(36) }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     if (!email || !pass) { setError('Заполните все поля'); return }
     if (pass.length < 6) { setError(t('auth.shortPass')); return }
-    const users = JSON.parse(localStorage.getItem('filbank-users') || '{}')
+    setLoading(true)
+    const usersSnap = await get(child(ref(db), 'users'))
+    const users = usersSnap.val() || {}
     if (mode === 'register') {
-      if (pass !== confirm) { setError(t('auth.passMismatch')); return }
-      if (users[email]) { setError(t('auth.emailExists')); return }
-      if (!country) { setError(lang === 'ru' ? 'Выберите страну' : 'Select a country'); return }
-      users[email] = { email, username: email.split('@')[0], passwordHash: hash(pass), country, createdAt: Date.now() }
-      localStorage.setItem('filbank-users', JSON.stringify(users))
+      if (pass !== confirm) { setError(t('auth.passMismatch')); setLoading(false); return }
+      if (users[email]) { setError(t('auth.emailExists')); setLoading(false); return }
+      if (!country) { setError(t('auth.country') === 'Country' ? 'Выберите страну' : 'Select a country'); setLoading(false); return }
+      const newUser = { email, username: email.split('@')[0], passwordHash: hash(pass), country, createdAt: Date.now() }
+      users[email] = newUser
+      await set(ref(db, 'users'), users)
       onAuth({ email, username: email.split('@')[0], country })
     } else {
       const user = users[email]
-      if (!user) { setError(t('auth.userNotFound')); return }
-      if (user.passwordHash !== hash(pass)) { setError(t('auth.wrongPass')); return }
+      if (!user) { setError(t('auth.userNotFound')); setLoading(false); return }
+      if (user.passwordHash !== hash(pass)) { setError(t('auth.wrongPass')); setLoading(false); return }
       onAuth({ email, username: user.username })
     }
+    setLoading(false)
   }
 
   return (
@@ -1880,15 +1885,16 @@ function App() {
     setShowProfile(false)
   }
 
-  const handleUsernameChange = (name) => {
+  const handleUsernameChange = async (name) => {
     setUsername(name)
     localStorage.setItem('filbank-user', name)
     if (currentUser) {
       const updated = { ...currentUser, username: name }
       setCurrentUser(updated)
       localStorage.setItem('filbank-current-user', JSON.stringify(updated))
-      const users = JSON.parse(localStorage.getItem('filbank-users') || '{}')
-      if (users[currentUser.email]) { users[currentUser.email].username = name; localStorage.setItem('filbank-users', JSON.stringify(users)) }
+      const usersSnap = await get(child(ref(db), 'users'))
+      const users = usersSnap.val() || {}
+      if (users[currentUser.email]) { users[currentUser.email].username = name; await set(ref(db, 'users'), users) }
     }
   }
 
@@ -1987,16 +1993,14 @@ function App() {
             <a href="#advantages" className="nav-link">{t('nav.advantages')}</a>
             <a href="#mining" className="nav-link">{t('nav.mining')}</a>
           </nav>
+          <button className="support-btn-header" onClick={() => setShowSupportModal(true)} title={t('support.title')}>
+            <span>💎</span>
+          </button>
           {(currentUser || publicKey) && (
             <button className="profile-btn" onClick={() => setShowProfile(true)}>
               <span className="profile-btn-avatar" style={{ background: publicKey ? `hsl(${parseInt(addrStr.slice(0, 8), 16) % 360}, 50%, 35%)` : 'hsl(268, 80%, 55%)' }}>
                 {publicKey ? addrStr.slice(0, 2).toUpperCase() : (currentUser?.email?.slice(0, 2) || 'FB').toUpperCase()}
               </span>
-            </button>
-          )}
-          {!currentUser && !publicKey && (
-            <button className="support-btn-header" onClick={() => setShowSupportModal(true)} title={t('support.title')}>
-              <span>💎</span>
             </button>
           )}
           {!currentUser && !publicKey && (

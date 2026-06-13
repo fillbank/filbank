@@ -889,6 +889,189 @@ function getWalletProvider(id) {
   } catch { return null }
 }
 
+function DonationVault({ t, donations }) {
+  const canvasRef = useRef(null)
+  const [rain, setRain] = useState([])
+  const [floaters, setFloaters] = useState([])
+  const prevLen = useRef(0)
+  const [hoveredAddress, setHoveredAddress] = useState(null)
+  const [hoveredText, setHoveredText] = useState('')
+
+  // Coin rain when new donation comes
+  useEffect(() => {
+    if (donations.length > prevLen.current) {
+      const newD = donations[donations.length - 1]
+      const coins = Array.from({ length: 20 }, (_, i) => ({
+        id: Date.now() + i,
+        x: Math.random() * 100,
+        delay: i * 0.1,
+        size: 20 + Math.random() * 15,
+        drift: (Math.random() - 0.5) * 40
+      }))
+      setRain(prev => [...prev, ...coins])
+      setFloaters(prev => [...prev, {
+        id: Date.now(),
+        name: newD?.twitter || newD?.type || 'Anonymous',
+        amount: newD?.amount || '',
+        x: 30 + Math.random() * 40,
+      }])
+      setTimeout(() => {
+        setRain(prev => prev.filter(c => Date.now() - c.id < 3000))
+        setFloaters(prev => prev.filter(f => Date.now() - f.id < 4000))
+      }, 4000)
+    }
+    prevLen.current = donations.length
+  }, [donations.length])
+
+  // Canvas particle effect
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    let animId
+    const particles = []
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+        size: Math.random() * 2 + 0.5, speedY: Math.random() * 0.3 + 0.1,
+        opacity: Math.random() * 0.4 + 0.1, hue: 260 + Math.random() * 40
+      })
+    }
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      particles.forEach(p => {
+        p.y += p.speedY
+        if (p.y > canvas.height) { p.y = -5; p.x = Math.random() * canvas.width }
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+        ctx.fillStyle = `hsla(${p.hue}, 80%, 60%, ${p.opacity})`
+        ctx.fill()
+      })
+      animId = requestAnimationFrame(animate)
+    }
+    animate()
+    return () => cancelAnimationFrame(animId)
+  }, [])
+
+  const total = donations.reduce((s, d) => s + parseFloat(d.amount), 0).toFixed(4)
+
+  const copyAddr = (addr, label) => {
+    navigator.clipboard.writeText(addr)
+    setHoveredText(label)
+    setHoveredAddress(addr)
+    setTimeout(() => setHoveredAddress(null), 2000)
+  }
+
+  return (
+    <section id="support" className="partners-section" style={{borderTop:'1px solid var(--border)',paddingTop:'60px',position:'relative',overflow:'hidden'}}>
+      <canvas ref={canvasRef} className="particles" style={{opacity:0.3}} />
+      <div className="section-header" style={{position:'relative',zIndex:1}}>
+        <div className="vault-badge">🏦</div>
+        <h2>{t('support.title')}</h2>
+        <p>{t('support.subtitle')}</p>
+      </div>
+
+      {/* 3D Vault */}
+      <div style={{display:'flex',justifyContent:'center',margin:'0 auto 40px',position:'relative',zIndex:1}}>
+        <div className="vault-3d">
+          <div className="vault-front">
+            <div className="vault-circle">
+              <span className="vault-dollar">$</span>
+            </div>
+            <div className="vault-handle"></div>
+            <div className="vault-bolts">
+              <span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+          <div className="vault-side"></div>
+          <div className="vault-top"></div>
+          <div className="vault-glow"></div>
+          {/* Coin rain */}
+          {rain.map(c => (
+            <div key={c.id} className="coin-rain"
+              style={{
+                left: `${c.x}%`,
+                width: c.size + 'px',
+                height: c.size + 'px',
+                animationDelay: c.delay + 's',
+                '--drift': c.drift + 'px'
+              }}
+            >🪙</div>
+          ))}
+          {/* Floaters */}
+          {floaters.map(f => (
+            <div key={f.id} className="donor-floater"
+              style={{ left: `${f.x}%` }}
+            >
+              <span className="floater-name">{f.name}</span>
+              <span className="floater-amount">+{f.amount} SOL</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Total raised */}
+      <div style={{textAlign:'center',marginBottom:'30px',position:'relative',zIndex:1}}>
+        <div className="vault-total-label">{t('support.totalRaised')}</div>
+        <div className="vault-total-amount">{total} SOL</div>
+      </div>
+
+      {/* Goals */}
+      <div style={{maxWidth:400,margin:'0 auto 30px',position:'relative',zIndex:1}}>
+        <div className="support-goal" style={{marginBottom:8}}>
+          <span className="support-goal-label">{t('support.goal1')}</span>
+          <div className="support-goal-progress">
+            <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'12%'}}></div></div>
+            <span className="support-goal-amount">12%</span>
+          </div>
+        </div>
+        <div className="support-goal" style={{marginBottom:8}}>
+          <span className="support-goal-label">{t('support.goal2')}</span>
+          <div className="support-goal-progress">
+            <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'5%'}}></div></div>
+            <span className="support-goal-amount">5%</span>
+          </div>
+        </div>
+        <div className="support-goal">
+          <span className="support-goal-label">{t('support.goal3')}</span>
+          <div className="support-goal-progress">
+            <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'3%'}}></div></div>
+            <span className="support-goal-amount">3%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Addresses */}
+      <div className="support-addresses" style={{maxWidth:480,margin:'0 auto',position:'relative',zIndex:1}}>
+        <div className="support-address">
+          <div className="support-address-header">
+            <span className="support-coin">◎ SOL</span>
+            <span className="support-network">Solana</span>
+          </div>
+          <div className="support-address-row">
+            <code className="support-address-code">7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF</code>
+            <button className="support-copy-btn" onClick={() => copyAddr('7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF','SOL')}>
+              {hoveredAddress === '7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF' ? '✓' : '📋'}
+            </button>
+          </div>
+        </div>
+        <div className="support-address">
+          <div className="support-address-header">
+            <span className="support-coin">💵 USDT</span>
+            <span className="support-network">SPL / TRC20 / ERC20</span>
+          </div>
+          <div className="support-address-row">
+            <code className="support-address-code">ETkmY37T9tKmwNzxLrNrLh6GdphDEDAB6qWfdywEGf8p</code>
+            <button className="support-copy-btn" onClick={() => copyAddr('ETkmY37T9tKmwNzxLrNrLh6GdphDEDAB6qWfdywEGf8p','USDT')}>
+              {hoveredAddress === 'ETkmY37T9tKmwNzxLrNrLh6GdphDEDAB6qWfdywEGf8p' ? '✓' : '📋'}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="support-note" style={{maxWidth:480,margin:'16px auto 0',position:'relative',zIndex:1}}>{t('support.note')}</div>
+    </section>
+  )
+}
+
 function SupportModal({ isOpen, onClose, t, donations, onDonate }) {
   const [copied, setCopied] = useState(null)
   const [donating, setDonating] = useState(null)
@@ -2332,68 +2515,7 @@ function App() {
           </div>
         </section>
 
-        <section id="support" className="partners-section" style={{borderTop:'1px solid var(--border)',paddingTop:'60px'}}>
-          <div className="section-header">
-            <h2>{t('support.title')}</h2>
-            <p>{t('support.subtitle')}</p>
-          </div>
-          <div style={{maxWidth:500,margin:'0 auto'}}>
-            <div className="support-goals">
-              <div className="support-goal">
-                <span className="support-goal-label">{t('support.goal1')}</span>
-                <div className="support-goal-progress">
-                  <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'12%'}}></div></div>
-                  <span className="support-goal-amount">12%</span>
-                </div>
-              </div>
-              <div className="support-goal">
-                <span className="support-goal-label">{t('support.goal2')}</span>
-                <div className="support-goal-progress">
-                  <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'5%'}}></div></div>
-                  <span className="support-goal-amount">5%</span>
-                </div>
-              </div>
-              <div className="support-goal">
-                <span className="support-goal-label">{t('support.goal3')}</span>
-                <div className="support-goal-progress">
-                  <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'3%'}}></div></div>
-                  <span className="support-goal-amount">3%</span>
-                </div>
-              </div>
-              <div className="support-goal" style={{borderTop:'1px solid var(--border)',paddingTop:'12px',marginTop:'4px'}}>
-                <span className="support-goal-label">{t('support.totalRaised')}</span>
-                <span className="support-goal-amount">{supportDonations.reduce((s, d) => s + parseFloat(d.amount), 0).toFixed(4)} SOL</span>
-              </div>
-            </div>
-            <div className="support-addresses">
-              <div className="support-address">
-                <div className="support-address-header">
-                  <span className="support-coin">◎ SOL</span>
-                  <span className="support-network">Solana</span>
-                </div>
-                <div className="support-address-row">
-                  <code className="support-address-code">7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF</code>
-                  <button className="support-copy-btn" onClick={() => {navigator.clipboard.writeText('7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF')}}>📋</button>
-                </div>
-              </div>
-              <div className="support-address">
-                <div className="support-address-header">
-                  <span className="support-coin">💵 USDT</span>
-                  <span className="support-network">SPL / TRC20 / ERC20</span>
-                </div>
-                <div className="support-address-row">
-                  <code className="support-address-code">ETkmY37T9tKmwNzxLrNrLh6GdphDEDAB6qWfdywEGf8p</code>
-                  <button className="support-copy-btn" onClick={() => {navigator.clipboard.writeText('ETkmY37T9tKmwNzxLrNrLh6GdphDEDAB6qWfdywEGf8p')}}>📋</button>
-                </div>
-              </div>
-            </div>
-            <div className="support-note">{t('support.note')}</div>
-            <div className="support-social">
-              <a href="https://t.me/FilBankofficial" target="_blank" rel="noopener" className="support-social-btn telegram">📱 {t('support.telegram')}</a>
-              <a href="https://twitter.com/FilBankOfficial" target="_blank" rel="noopener" className="support-social-btn twitter">🐦 {t('support.twitter')}</a>
-            </div>
-          </div>
-        </section>
+        <DonationVault t={t} donations={supportDonations} />
 
         <section id="faq" className="faq-section">
           <div className="section-header">

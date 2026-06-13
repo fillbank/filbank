@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, createContext, useContext } from 'react'
-import { clusterApiUrl, Connection, PublicKey } from '@solana/web3.js'
+import { useState, useEffect, useRef, memo, createContext, useContext } from 'react'
+import { Connection, PublicKey } from '@solana/web3.js'
 import { initializeApp } from 'firebase/app'
 import { getDatabase, ref, set, onValue, get, child } from 'firebase/database'
 import './App.css'
@@ -14,10 +14,10 @@ const firebaseConfig = {
   appId: "1:687655169383:web:7342ecec0cce90b63553c2",
   measurementId: "G-RLEYSCRSWP"
 }
-const fbApp = initializeApp(firebaseConfig)
-const db = getDatabase(fbApp)
+const app = initializeApp(firebaseConfig)
+const db = getDatabase(app)
 
-const connection = new Connection('https://api.mainnet-beta.solana.com')
+const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed')
 const DONATION_ADDRESS_SOL = '7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF'
 const DONATION_ADDRESS_USDT = 'ETkmY37T9tKmwNzxLrNrLh6GdphDEDAB6qWfdywEGf8p'
 
@@ -645,7 +645,7 @@ const WALLET_DEEP_LINKS = [
   { id: 'torus', name: 'Torus', icon: '🔴', color: '#FF4B4B', installUrl: 'https://torus.network', scheme: 'torus://' },
 ]
 
-function Particles() {
+const Particles = memo(function Particles() {
   const canvasRef = useRef(null)
   useEffect(() => {
     const canvas = canvasRef.current
@@ -685,9 +685,9 @@ function Particles() {
     return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize) }
   }, [])
   return <canvas ref={canvasRef} className="particles" />
-}
+})
 
-function FloatingCoin() {
+const FloatingCoin = memo(function FloatingCoin() {
   const canvasRef = useRef(null)
   useEffect(() => {
     const canvas = canvasRef.current; const ctx = canvas.getContext('2d')
@@ -751,7 +751,7 @@ function FloatingCoin() {
     return () => cancelAnimationFrame(animId)
   }, [])
   return <canvas ref={canvasRef} className="coin-canvas" width={400} height={400} />
-}
+})
 
 function BankCard() {
   const cardRef = useRef(null)

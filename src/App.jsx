@@ -634,16 +634,10 @@ function detectWallets() {
 }
 
 const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
-const WALLET_DEEP_LINKS = [
-  { id: 'phantom', name: 'Phantom', icon: '👻', color: '#AB9FF2', installUrl: 'https://phantom.app', scheme: 'https://phantom.app/ul/' },
-  { id: 'solflare', name: 'Solflare', icon: '🔥', color: '#FF9338', installUrl: 'https://solflare.com', scheme: 'https://solflare.com/ul/' },
-  { id: 'backpack', name: 'Backpack', icon: '🎒', color: '#F7931A', installUrl: 'https://backpack.app', scheme: 'backpack://' },
-  { id: 'glow', name: 'Glow', icon: '✨', color: '#14f195', installUrl: 'https://glow.app', scheme: 'glow://' },
-  { id: 'exodus', name: 'Exodus', icon: '◆', color: '#9945ff', installUrl: 'https://exodus.com', scheme: 'exodus://' },
-  { id: 'slope', name: 'Slope', icon: '🦘', color: '#FF6B35', installUrl: 'https://slope.finance', scheme: 'slope://' },
-  { id: 'coin98', name: 'Coin98', icon: '🪙', color: '#C9293C', installUrl: 'https://coin98.com', scheme: 'coin98://' },
-  { id: 'torus', name: 'Torus', icon: '🔴', color: '#FF4B4B', installUrl: 'https://torus.network', scheme: 'torus://' },
-]
+const WALLET_BROWSE_LINKS = {
+  phantom: 'https://phantom.app/ul/browse?dapp_url=',
+  solflare: 'https://solflare.com/ul/',
+}
 
 const Particles = memo(function Particles() {
   const canvasRef = useRef(null)
@@ -1038,7 +1032,8 @@ function DonationVault({ t, donations }) {
               {hoveredAddress === '7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF' ? '✓' : '📋'}
             </button>
           </div>
-          <div style={{display:'flex',gap:8,marginTop:10}}>
+          <div style={{fontSize:12,opacity:0.6,marginTop:10,textAlign:'center'}}>Быстрый донат (0.1 SOL):</div>
+          <div style={{display:'flex',gap:8,marginTop:5}}>
             <button className="support-donate-btn btn-primary" onClick={() => { window.open('https://phantom.app/ul/v1/transfer?recipient=7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF&amount=0.1', '_blank') }} style={{flex:1,fontSize:13,padding:'10px 16px'}}>
               👻 Phantom
             </button>
@@ -1046,6 +1041,7 @@ function DonationVault({ t, donations }) {
               🔥 Solflare
             </button>
           </div>
+          <div style={{fontSize:11,opacity:0.5,marginTop:6,textAlign:'center'}}>🔗 Чтобы привязать кошелёк — нажми «Подключить кошелёк» в меню сверху</div>
         </div>
         <div className="support-address">
           <div className="support-address-header">
@@ -1678,13 +1674,15 @@ function PartnerForm({ onSubmit, t }) {
 
 function WalletSelectModal({ onClose, onSelect, t }) {
   const [connecting, setConnecting] = useState(null)
+  const [showMobileHint, setShowMobileHint] = useState(false)
   const handleConnect = async (wl) => {
     if (IS_MOBILE) {
-      const dl = WALLET_DEEP_LINKS.find(w => w.id === wl.id)
-      if (dl) {
-        window.location.href = dl.scheme + encodeURIComponent(window.location.href)
-        return
+      setShowMobileHint(true)
+      const url = WALLET_BROWSE_LINKS[wl.id]
+      if (url) {
+        window.open(url + encodeURIComponent(window.location.href), '_blank')
       }
+      return
     }
     const provider = getWalletProvider(wl.id)
     if (provider) {
@@ -1700,6 +1698,14 @@ function WalletSelectModal({ onClose, onSelect, t }) {
       <div className="modal wallet-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
         <h3 className="modal-title">{t('wallet.select')}</h3>
+        {showMobileHint ? (
+          <div style={{padding:'20px',textAlign:'center'}}>
+            <div style={{fontSize:48,marginBottom:12}}>📱</div>
+            <p style={{marginBottom:12,lineHeight:1.5}}>{t('wallet.mobileHint')}</p>
+            <p style={{fontSize:13,opacity:0.7,lineHeight:1.4}}>1. Открой приложение кошелька<br/>2. Нажми "Browser" / "Обозреватель"<br/>3. Введи адрес: crypto-bank-azure.vercel.app<br/>4. Нажми "Connect Wallet" на сайте</p>
+            <button className="btn-primary" onClick={onClose} style={{marginTop:16}}>OK</button>
+          </div>
+        ) : (
         <div className="wallet-list">
           {WALLET_LIST.map((wl) => {
             const ok = !!getWalletProvider(wl.id)
@@ -1714,7 +1720,8 @@ function WalletSelectModal({ onClose, onSelect, t }) {
             )
           })}
         </div>
-        <p className="wallet-hint">{IS_MOBILE ? t('wallet.mobileHint') : t('wallet.none')}</p>
+        )}
+        <p className="wallet-hint">{IS_MOBILE ? '' : t('wallet.none')}</p>
       </div>
     </div>
   )

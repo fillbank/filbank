@@ -2020,17 +2020,17 @@ function App() {
     return () => { unsub1(); unsub2(); unsub3(); unsub4() }
   }, [])
 
-  // Save to Firebase when state changes (debounced)
+  // Save to Firebase when state changes (debounced) — only if data exists
   useEffect(() => {
-    set(ref(db, 'ogParticipants'), ogParticipants)
+    if (ogParticipants.length > 0) set(ref(db, 'ogParticipants'), ogParticipants)
   }, [ogParticipants])
 
   useEffect(() => {
-    set(ref(db, 'supportDonations'), supportDonations)
+    if (supportDonations.length > 0) set(ref(db, 'supportDonations'), supportDonations)
   }, [supportDonations])
 
   useEffect(() => {
-    set(ref(db, 'partnerRequests'), partnerRequests)
+    if (partnerRequests.length > 0) set(ref(db, 'partnerRequests'), partnerRequests)
   }, [partnerRequests])
 
   // Auto-scan SOL donations from blockchain

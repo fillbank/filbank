@@ -653,6 +653,52 @@ function getWalletProvider(id) {
   } catch { return null }
 }
 
+const WALLET_WC_URI = {
+  phantom: (uri) => `phantom://wc?uri=${encodeURIComponent(uri)}`,
+  solflare: (uri) => `solflare://wc?uri=${encodeURIComponent(uri)}`,
+  backpack: (uri) => `backpack://wc?uri=${encodeURIComponent(uri)}`,
+}
+
+let wcClient = null
+async function getSignClient() {
+  if (wcClient) return wcClient
+  const { SignClient } = await import('@walletconnect/sign-client')
+  wcClient = await SignClient.init({ projectId: '4e7c5fe0ab68faaeb8267cc324f5e781' })
+  return wcClient
+}
+
+async function connectViaWalletConnect(wallet) {
+  try {
+    const client = await getSignClient()
+    const { uri, approval } = await client.connect({
+      requiredNamespaces: {
+        solana: {
+          methods: ['signMessage', 'signTransaction', 'signAndSendTransaction'],
+          chains: ['solana:mainnet-beta'],
+          events: ['chainChanged', 'accountsChanged'],
+        },
+      },
+    })
+    if (!uri) { throw new Error('No URI') }
+    const deepLink = WALLET_WC_URI[wallet.id]
+    if (deepLink) {
+      window.open(deepLink(uri), '_blank')
+    } else {
+      window.open(`https://${wallet.id}.app/wc?uri=${encodeURIComponent(uri)}`, '_blank')
+    }
+    const session = await approval
+    const account = session.namespaces.solana?.accounts?.[0]
+    if (!account) throw new Error('No account')
+    const address = account.split(':')[2]
+    const pubKey = new PublicKey(address)
+    const bal = await connection.getBalance(pubKey)
+    return { publicKey: pubKey, wallet: { id: wallet.id, name: wallet.name, icon: wallet.icon, isWC: true }, balance: (bal / 1e9).toFixed(4) }
+  } catch (e) {
+    console.error('WC connect error:', e)
+    return null
+  }
+}
+
 const Particles = memo(function Particles() {
   const canvasRef = useRef(null)
   useEffect(() => {
@@ -764,7 +810,9 @@ const FloatingCoin = memo(function FloatingCoin() {
 function BankCard() {
   const cardRef = useRef(null)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
   useEffect(() => {
+    if (isTouchDevice) return
     const card = cardRef.current
     if (!card) return
     let rafId; const target = { x: 0, y: 0 }; const current = { x: 0, y: 0 }
@@ -1671,12 +1719,9 @@ function WalletSelectModal({ onClose, onSelect, t }) {
   const [connecting, setConnecting] = useState(null)
   const handleConnect = async (wl) => {
     if (IS_MOBILE) {
-      const browseUrl = wl.id === 'phantom' ? 'https://phantom.app/ul/browse?dapp_url=' : wl.id === 'solflare' ? 'https://solflare.com/ul/' : null
-      if (browseUrl) {
-        window.open(browseUrl + encodeURIComponent(window.location.href), '_blank')
-      } else {
-        window.open(wl.url, '_blank')
-      }
+      setConnecting(wl.id)
+      try { await onSelect({ id: wl.id, name: wl.name, icon: wl.icon }) } catch {}
+      setConnecting(null)
       return
     }
     const provider = getWalletProvider(wl.id)
@@ -1692,7 +1737,7 @@ function WalletSelectModal({ onClose, onSelect, t }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal wallet-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
-        <h3 className="modal-title">{t('wallet.select')}</h3>
+        <h3 className="modal-title">{IS_MOBILE ? 'Подключение через WalletConnect' : t('wallet.select')}</h3>
         <div className="wallet-list">
           {WALLET_LIST.map((wl) => {
             const ok = !!getWalletProvider(wl.id) || IS_MOBILE
@@ -1707,7 +1752,7 @@ function WalletSelectModal({ onClose, onSelect, t }) {
             )
           })}
         </div>
-        {IS_MOBILE && <p className="wallet-hint">Откроет приложение кошелька. Подтверди подключение там.</p>}
+        {IS_MOBILE && <p className="wallet-hint">Откроет приложение кошелька. Подтверди подключение там, затем вернись в браузер.</p>}
       </div>
     </div>
   )
@@ -2095,13 +2140,16 @@ function App() {
     setConnecting(true)
     try {
       if (IS_MOBILE) {
-        const dl = wallet.provider ? null : null
-        const browseUrl = wallet.id === 'phantom' ? 'https://phantom.app/ul/browse?dapp_url=' : wallet.id === 'solflare' ? 'https://solflare.com/ul/' : null
-        if (browseUrl) {
-          window.open(browseUrl + encodeURIComponent(window.location.href), '_blank')
-          setConnecting(false)
-          return
+        const result = await connectViaWalletConnect(wallet)
+        if (result) {
+          setPublicKey(result.publicKey)
+          setActiveWallet(result.wallet)
+          setBalance(result.balance)
+          localStorage.setItem('filbank-wallet', result.wallet.id)
+          localStorage.setItem('filbank-pubkey', result.publicKey.toBase58())
+          setShowWalletModal(false)
         }
+        return
       }
       if (!wallet.provider) { alert(t('wallet.install')); setConnecting(false); return }
       const resp = await wallet.provider.connect()

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, memo, createContext, useContext } from 'react'
-import { Connection, PublicKey } from '@solana/web3.js'
+import { PublicKey } from '@solana/web3.js'
+import { useWallet, useConnection } from '@solana/wallet-adapter-react'
+import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { initializeApp } from 'firebase/app'
 import { getDatabase, ref, set, onValue, get } from 'firebase/database'
 import './App.css'
@@ -17,7 +19,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 const db = getDatabase(app)
 
-const connection = new Connection('https://api.mainnet-beta.solana.com', 'confirmed')
 const DONATION_ADDRESS_SOL = '7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF'
 const DONATION_ADDRESS_USDT = 'ETkmY37T9tKmwNzxLrNrLh6GdphDEDAB6qWfdywEGf8p'
 
@@ -609,52 +610,6 @@ function LanguageProvider({ children }) {
       {children}
     </LanguageContext.Provider>
   )
-}
-
-function detectWallets() {
-  const list = []
-  const dedup = new Set()
-  const add = (id, name, icon, getter) => {
-    try {
-      const p = typeof getter === 'function' ? getter() : getter
-      if (p && !dedup.has(p)) { dedup.add(p); list.push({ id, name, icon, provider: p }) }
-    } catch {}
-  }
-  add('phantom', 'Phantom', '👻', () => window.phantom?.solana)
-  if (window.solflare?.isSolflare) add('solflare', 'Solflare', '🔥', window.solflare)
-  if (window.backpack?.isBackpack) add('backpack', 'Backpack', '🎒', window.backpack)
-  if (window.glow?.isGlow) add('glow', 'Glow', '✨', window.glow)
-  if (window.exodus?.isExodus) add('exodus', 'Exodus', '◆', window.exodus)
-  if (window.slope?.isSlope) add('slope', 'Slope', '🦘', window.slope)
-  if (window.coin98?.isCoin98) add('coin98', 'Coin98', '🪙', window.coin98)
-  if (window.safety?.isSafety) add('safety', 'Safety', '🛡️', window.safety)
-  if (window.torus?.isTorus) add('torus', 'Torus', '🔴', window.torus)
-  if (list.length === 0 && window.solana) add('solana', 'Solana Wallet', '💎', window.solana)
-  return list
-}
-
-const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
-const WALLET_BROWSE_LINKS = {
-  phantom: 'https://phantom.app/ul/browse?dapp_url=',
-  solflare: 'https://solflare.com/ul/',
-}
-const WALLET_LIST = [
-  { id: 'phantom', name: 'Phantom', icon: '👻', url: 'https://phantom.app' },
-  { id: 'solflare', name: 'Solflare', icon: '🔥', url: 'https://solflare.com' },
-  { id: 'backpack', name: 'Backpack', icon: '🎒', url: 'https://backpack.app' },
-  { id: 'glow', name: 'Glow', icon: '✨', url: 'https://glow.app' },
-  { id: 'exodus', name: 'Exodus', icon: '◆', url: 'https://exodus.com' },
-]
-
-function getWalletProvider(id) {
-  try {
-    if (id === 'phantom') return window.phantom?.solana || null
-    if (id === 'solflare') return window.solflare || null
-    if (id === 'backpack') return window.backpack || null
-    if (id === 'glow') return window.glow || null
-    if (id === 'exodus') return window.exodus || null
-    return null
-  } catch { return null }
 }
 
 const Particles = memo(function Particles() {
@@ -1671,61 +1626,6 @@ function PartnerForm({ onSubmit, t }) {
   )
 }
 
-function WalletSelectModal({ onClose, onSelect, t }) {
-  const [connecting, setConnecting] = useState(null)
-  const [showMobileHint, setShowMobileHint] = useState(false)
-  const handleConnect = async (wl) => {
-    if (IS_MOBILE) {
-      setShowMobileHint(true)
-      const url = WALLET_BROWSE_LINKS[wl.id]
-      if (url) {
-        window.open(url + encodeURIComponent(window.location.href), '_blank')
-      }
-      return
-    }
-    const provider = getWalletProvider(wl.id)
-    if (provider) {
-      setConnecting(wl.id)
-      try { await onSelect({ id: wl.id, name: wl.name, icon: wl.icon, provider }) } catch {}
-      setConnecting(null)
-    } else {
-      window.open(wl.url, '_blank')
-    }
-  }
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal wallet-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>✕</button>
-        <h3 className="modal-title">{t('wallet.select')}</h3>
-        {showMobileHint ? (
-          <div style={{padding:'20px',textAlign:'center'}}>
-            <div style={{fontSize:48,marginBottom:12}}>📱</div>
-            <p style={{marginBottom:12,lineHeight:1.5}}>{t('wallet.mobileHint')}</p>
-            <p style={{fontSize:13,opacity:0.7,lineHeight:1.4}}>1. Открой приложение кошелька<br/>2. Нажми "Browser" / "Обозреватель"<br/>3. Введи адрес: crypto-bank-azure.vercel.app<br/>4. Нажми "Connect Wallet" на сайте</p>
-            <button className="btn-primary" onClick={onClose} style={{marginTop:16}}>OK</button>
-          </div>
-        ) : (
-        <div className="wallet-list">
-          {WALLET_LIST.map((wl) => {
-            const ok = !!getWalletProvider(wl.id)
-            return (
-              <button key={wl.id} className="wallet-option" onClick={() => handleConnect(wl)} disabled={connecting === wl.id}>
-                <span className="wallet-icon">{wl.icon}</span>
-                <span className="wallet-name">{wl.name}</span>
-                <span className={`wallet-tag ${ok ? 'ready' : 'get'}`}>
-                  {connecting === wl.id ? '...' : ok ? '✓' : '↗'}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-        )}
-        <p className="wallet-hint">{IS_MOBILE ? '' : t('wallet.none')}</p>
-      </div>
-    </div>
-  )
-}
-
 const COUNTRIES = {
   US: { name: 'USA', x: 18, y: 38, flag: '🇺🇸' },
   RU: { name: 'Russia', x: 52, y: 25, flag: '🇷🇺' },
@@ -1990,11 +1890,10 @@ function FAQItem({ question, answer }) {
 function App() {
   const { t, lang } = useTranslation()
   const { setLang } = useContext(LanguageContext)
-  const [publicKey, setPublicKey] = useState(null)
+  const { publicKey, connecting, wallet: activeWallet, disconnect } = useWallet()
+  const { connection } = useConnection()
+  const { setVisible: setShowWalletModal } = useWalletModal()
   const [balance, setBalance] = useState(null)
-  const [connecting, setConnecting] = useState(false)
-  const [showWalletModal, setShowWalletModal] = useState(false)
-  const [activeWallet, setActiveWallet] = useState(null)
   const [showProfile, setShowProfile] = useState(false)
   const [username, setUsername] = useState(() => localStorage.getItem('filbank-user') || '')
   const [currentUser, setCurrentUser] = useState(() => {
@@ -2081,53 +1980,18 @@ function App() {
     return () => window.removeEventListener('open-og-modal', handleOpenOG)
   }, [])
 
-  // Auto-reconnect on mount
+  // Fetch balance when wallet connects
   useEffect(() => {
-    const savedWallet = localStorage.getItem('filbank-wallet')
-    const savedKey = localStorage.getItem('filbank-pubkey')
-    if (savedWallet && savedKey) {
-      const timer = setTimeout(async () => {
-        try {
-          const wallets = detectWallets()
-          const w = wallets.find((x) => x.id === savedWallet)
-          if (w?.provider) {
-            const resp = await w.provider.connect({ onlyIfTrusted: true })
-            setPublicKey(resp.publicKey)
-            setActiveWallet(w)
-            const bal = await connection.getBalance(resp.publicKey)
-            setBalance((bal / 1e9).toFixed(4))
-            w.provider.on('disconnect', () => { setPublicKey(null); setBalance(null); setActiveWallet(null); localStorage.removeItem('filbank-wallet'); localStorage.removeItem('filbank-pubkey') })
-          }
-        } catch { localStorage.removeItem('filbank-wallet'); localStorage.removeItem('filbank-pubkey') }
-      }, 600)
-      return () => clearTimeout(timer)
+    if (publicKey) {
+      connection.getBalance(publicKey).then(bal => setBalance((bal / 1e9).toFixed(4))).catch(() => {})
+    } else {
+      setBalance(null)
     }
-  }, [])
+  }, [publicKey, connection])
 
-  const connectWallet = async (wallet) => {
-    setConnecting(true)
-    try {
-      if (!wallet.provider) { alert(t('wallet.install')); setConnecting(false); return }
-      const resp = await wallet.provider.connect()
-      setPublicKey(resp.publicKey)
-      setActiveWallet(wallet)
-      localStorage.setItem('filbank-wallet', wallet.id)
-      localStorage.setItem('filbank-pubkey', resp.publicKey.toBase58())
-      const bal = await connection.getBalance(resp.publicKey)
-      setBalance((bal / 1e9).toFixed(4))
-      wallet.provider.on('disconnect', () => {
-        setPublicKey(null); setBalance(null); setActiveWallet(null)
-        localStorage.removeItem('filbank-wallet'); localStorage.removeItem('filbank-pubkey')
-      })
-      setShowWalletModal(false)
-    } catch (e) { console.error(e); alert(t('wallet.error')) }
-    finally { setConnecting(false) }
-  }
-
-  const disconnect = () => {
-    if (activeWallet?.provider) try { activeWallet.provider.disconnect() } catch {}
-    setPublicKey(null); setBalance(null); setActiveWallet(null)
-    localStorage.removeItem('filbank-wallet'); localStorage.removeItem('filbank-pubkey')
+  const disconnectWallet = () => {
+    disconnect()
+    setBalance(null)
     setShowProfile(false)
   }
 
@@ -2157,7 +2021,7 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null)
     localStorage.removeItem('filbank-current-user')
-    disconnect()
+    disconnectWallet()
   }
 
   const openSupportModal = () => {
@@ -2278,7 +2142,7 @@ function App() {
                 <div className="wallet-badge">
                   <span className="wallet-balance">{balance} SOL</span>
                   <button className="wallet-address" onClick={() => navigator.clipboard.writeText(addrStr)}>{shortAddress(addrStr)}</button>
-                  <button className="btn-disconnect" onClick={disconnect}>✕</button>
+                  <button className="btn-disconnect" onClick={disconnectWallet}>✕</button>
                 </div>
               )}
             </div>
@@ -2695,10 +2559,9 @@ function App() {
         </footer>
       </main>
 
-      {showWalletModal && <WalletSelectModal t={t} onClose={() => setShowWalletModal(false)} onSelect={connectWallet} />}
-      {showProfile && <ProfileModal user={currentUser} publicKey={publicKey} balance={balance} username={username} onUsernameChange={handleUsernameChange} onClose={() => setShowProfile(false)} onDisconnect={handleLogout} onConnectWallet={() => { setShowProfile(false); setShowWalletModal(true) }} t={t} lang={lang} activeWalletName={activeWallet?.name || ''} />}
+      {showProfile && <ProfileModal user={currentUser} publicKey={publicKey} balance={balance} username={username} onUsernameChange={handleUsernameChange} onClose={() => setShowProfile(false)} onDisconnect={handleLogout} onConnectWallet={() => { setShowProfile(false); setShowWalletModal(true) }} t={t} lang={lang} activeWalletName={activeWallet?.adapter?.name || ''} />}
       {showAuthModal && <AuthModal mode={authMode} onClose={() => setShowAuthModal(false)} onSwitch={setAuthMode} onAuth={handleAuth} t={t} />}
-      {showOGModal && <OGModal isOpen={showOGModal} onClose={() => setShowOGModal(false)} t={t} publicKey={publicKey} onConnectWallet={() => { setShowOGModal(false); setShowWalletModal(true) }} connectedWallet={activeWallet?.name || ''} />}
+      {showOGModal && <OGModal isOpen={showOGModal} onClose={() => setShowOGModal(false)} t={t} publicKey={publicKey} onConnectWallet={() => { setShowOGModal(false); setShowWalletModal(true) }} connectedWallet={activeWallet?.adapter?.name || ''} />}
       {showAdminPanel && <AdminPanel isOpen={showAdminPanel} onClose={() => setShowAdminPanel(false)} t={t} ogParticipants={ogParticipants} supportDonations={supportDonations} partnerRequests={partnerRequests} onAddDonation={handleDonate} onAddOG={(p) => setOgParticipants(prev => prev.some(x => x.wallet === p.wallet) ? prev : [...prev, p])} />}
     </div>
   )

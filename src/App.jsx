@@ -1,6 +1,21 @@
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import { clusterApiUrl, Connection, PublicKey } from '@solana/web3.js'
+import { initializeApp } from 'firebase/app'
+import { getDatabase, ref, set, onValue } from 'firebase/database'
 import './App.css'
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC_fVrBWXf7dAavafMeRBDLFrUqrg6FeeE",
+  authDomain: "fillbank.firebaseapp.com",
+  databaseURL: "https://fillbank-default-rtdb.firebaseio.com",
+  projectId: "fillbank",
+  storageBucket: "fillbank.firebasestorage.app",
+  messagingSenderId: "687655169383",
+  appId: "1:687655169383:web:7342ecec0cce90b63553c2",
+  measurementId: "G-RLEYSCRSWP"
+}
+const fbApp = initializeApp(firebaseConfig)
+const db = getDatabase(fbApp)
 
 const connection = new Connection(clusterApiUrl('devnet'))
 
@@ -1770,27 +1785,29 @@ function App() {
   const [showSupportModal, setShowSupportModal] = useState(false)
   const [showOGModal, setShowOGModal] = useState(false)
   const [showAdminPanel, setShowAdminPanel] = useState(false)
-  const [ogParticipants, setOgParticipants] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('filbank-og-participants') || '[]') } catch { return [] }
-  })
-  const [supportDonations, setSupportDonations] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('filbank-support-donations') || '[]') } catch { return [] }
-  })
-  const [partnerRequests, setPartnerRequests] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('filbank-partner-requests') || '[]') } catch { return [] }
-  })
+  const [ogParticipants, setOgParticipants] = useState([])
+  const [supportDonations, setSupportDonations] = useState([])
+  const [partnerRequests, setPartnerRequests] = useState([])
 
-  // Save to localStorage when state changes
+  // Listen for real-time updates from Firebase
   useEffect(() => {
-    localStorage.setItem('filbank-og-participants', JSON.stringify(ogParticipants))
+    const unsub1 = onValue(ref(db, 'ogParticipants'), (snap) => setOgParticipants(snap.val() || []))
+    const unsub2 = onValue(ref(db, 'supportDonations'), (snap) => setSupportDonations(snap.val() || []))
+    const unsub3 = onValue(ref(db, 'partnerRequests'), (snap) => setPartnerRequests(snap.val() || []))
+    return () => { unsub1(); unsub2(); unsub3() }
+  }, [])
+
+  // Save to Firebase when state changes (debounced)
+  useEffect(() => {
+    set(ref(db, 'ogParticipants'), ogParticipants)
   }, [ogParticipants])
 
   useEffect(() => {
-    localStorage.setItem('filbank-support-donations', JSON.stringify(supportDonations))
+    set(ref(db, 'supportDonations'), supportDonations)
   }, [supportDonations])
 
   useEffect(() => {
-    localStorage.setItem('filbank-partner-requests', JSON.stringify(partnerRequests))
+    set(ref(db, 'partnerRequests'), partnerRequests)
   }, [partnerRequests])
 
   // Admin panel hotkey: Ctrl+Shift+A

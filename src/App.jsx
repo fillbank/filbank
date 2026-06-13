@@ -2002,13 +2002,15 @@ function App() {
   const [ogParticipants, setOgParticipants] = useState([])
   const [supportDonations, setSupportDonations] = useState([])
   const [partnerRequests, setPartnerRequests] = useState([])
+  const [usersCount, setUsersCount] = useState(0)
 
   // Listen for real-time updates from Firebase
   useEffect(() => {
     const unsub1 = onValue(ref(db, 'ogParticipants'), (snap) => setOgParticipants(snap.val() || []))
     const unsub2 = onValue(ref(db, 'supportDonations'), (snap) => setSupportDonations(snap.val() || []))
     const unsub3 = onValue(ref(db, 'partnerRequests'), (snap) => setPartnerRequests(snap.val() || []))
-    return () => { unsub1(); unsub2(); unsub3() }
+    const unsub4 = onValue(ref(db, 'users'), (snap) => { const v = snap.val(); setUsersCount(v ? Object.keys(v).length : 0) })
+    return () => { unsub1(); unsub2(); unsub3(); unsub4() }
   }, [])
 
   // Save to Firebase when state changes (debounced)
@@ -2279,12 +2281,10 @@ function App() {
             </div>
             <div className="hero-stats">
               {(() => {
-                const users = JSON.parse(localStorage.getItem('filbank-users') || '{}')
-                const count = Object.keys(users).length
                 const mined = parseFloat(localStorage.getItem('filbank-mined') || '0')
                 return (
                   <>
-                    <div className="hero-stat"><span className="hero-stat-value">{count}</span><span className="hero-stat-label">{t('hero.stat.users')}</span></div>
+                    <div className="hero-stat"><span className="hero-stat-value">{usersCount}</span><span className="hero-stat-label">{t('hero.stat.users')}</span></div>
                     <div className="hero-stat"><span className="hero-stat-value">{mined.toFixed(2)} FILB</span><span className="hero-stat-label">{t('hero.stat.tvl')}</span></div>
                     <div className="hero-stat"><span className="hero-stat-value">6</span><span className="hero-stat-label">{t('hero.stat.features')}</span></div>
                   </>

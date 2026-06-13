@@ -409,6 +409,15 @@ a { text-decoration: none; color: inherit; }
 .wallet-hint { text-align: center; font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 14px; padding: 0 10px; line-height: 1.5; }
 .wallet-hint .btn-copy { margin-top: 10px; padding: 8px 16px; background: rgba(153,69,255,0.2); border: 1px solid rgba(153,69,255,0.3); border-radius: 8px; color: #fff; cursor: pointer; font-size: 13px; }
 
+.mobile-wallet-info { padding: 0 4px; }
+.mobile-wallet-info p { color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.5; margin-bottom: 16px; }
+.mobile-wallet-steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.mobile-wallet-step { display: flex; align-items: center; gap: 10px; font-size: 14px; color: rgba(255,255,255,0.8); }
+.mws-num { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg,#9945ff,#14f195); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #000; flex-shrink: 0; }
+.btn-copy { width: 100%; padding: 12px; background: linear-gradient(135deg,#9945ff,#14f195); border: none; border-radius: 10px; color: #000; font-size: 15px; font-weight: 600; cursor: pointer; }
+.mobile-wallet-icons { display: flex; gap: 12px; justify-content: center; margin-top: 16px; }
+.mobile-wallet-icons span { padding: 8px 14px; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 13px; color: rgba(255,255,255,0.5); cursor: pointer; }
+
 /* Profile */
 .profile-modal { max-width: 440px; padding: 28px; }
 .profile-header { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; }

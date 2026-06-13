@@ -1674,12 +1674,8 @@ function WalletSelectModal({ onClose, onSelect, t }) {
   const handleConnect = async (wl) => {
     if (IS_MOBILE) {
       setConnecting(wl.id)
-      try {
-        const url = encodeURIComponent(window.location.href)
-        if (wl.id === 'phantom') window.location.href = 'https://phantom.app/ul/browse?dapp_url=' + url
-        else if (wl.id === 'solflare') window.location.href = 'https://solflare.com/ul/' + url
-        else window.open(wl.url, '_blank')
-      } catch {}
+      navigator.clipboard.writeText(window.location.href)
+      setConnecting(null)
       return
     }
     const provider = getWalletProvider(wl.id)
@@ -1695,22 +1691,41 @@ function WalletSelectModal({ onClose, onSelect, t }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal wallet-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
-        <h3 className="modal-title">{t('wallet.select')}</h3>
-        <div className="wallet-list">
-          {WALLET_LIST.map((wl) => {
-            const ok = !!getWalletProvider(wl.id)
-            return (
-              <button key={wl.id} className="wallet-option" onClick={() => handleConnect(wl)} disabled={connecting === wl.id}>
-                <span className="wallet-icon">{wl.icon}</span>
-                <span className="wallet-name">{wl.name}</span>
-                <span className={`wallet-tag ${ok ? 'ready' : 'get'}`}>
-                  {connecting === wl.id ? '...' : !IS_MOBILE && !ok ? '↗' : ''}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-        {IS_MOBILE && <div className="wallet-hint"><p>Нажми на кошелёк — откроется его браузер с этим сайтом. Там нажми «Connect Wallet» и подключись.</p><button className="btn-copy" onClick={() => { navigator.clipboard.writeText(window.location.href); alert('URL скопирован!') }}>📋 Копировать URL сайта</button></div>}
+        {IS_MOBILE ? (
+          <>
+            <h3 className="modal-title">📱 Подключение на телефоне</h3>
+            <div className="mobile-wallet-info">
+              <p>На телефоне кошелёк подключается через встроенный браузер приложения:</p>
+              <div className="mobile-wallet-steps">
+                <div className="mobile-wallet-step"><span className="mws-num">1</span> Скопируй URL сайта (кнопка ниже)</div>
+                <div className="mobile-wallet-step"><span className="mws-num">2</span> Открой Phantom / Solflare</div>
+                <div className="mobile-wallet-step"><span className="mws-num">3</span> В браузере приложения вставь URL</div>
+                <div className="mobile-wallet-step"><span className="mws-num">4</span> Нажми «Connect Wallet» — всё работает!</div>
+              </div>
+              <button className="btn-copy" onClick={() => { navigator.clipboard.writeText(window.location.href); alert('✅ URL скопирован!') }}>📋 Копировать URL сайта</button>
+              <div className="mobile-wallet-icons">
+                <span onClick={() => window.open('https://phantom.app', '_blank')}>👻 Phantom</span>
+                <span onClick={() => window.open('https://solflare.com', '_blank')}>🔥 Solflare</span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="modal-title">{t('wallet.select')}</h3>
+            <div className="wallet-list">
+              {WALLET_LIST.map((wl) => {
+                const ok = !!getWalletProvider(wl.id)
+                return (
+                  <button key={wl.id} className="wallet-option" onClick={() => handleConnect(wl)} disabled={connecting === wl.id}>
+                    <span className="wallet-icon">{wl.icon}</span>
+                    <span className="wallet-name">{wl.name}</span>
+                    {!ok && <span className="wallet-tag get">↗</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

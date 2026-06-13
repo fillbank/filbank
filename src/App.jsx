@@ -193,6 +193,7 @@ const translations = {
     'support.goal1': 'Хостинг и инфраструктура',
     'support.goal2': 'Листинг на Pump.fun',
     'support.goal3': 'Маркетинг и аудит',
+    'support.totalRaised': 'Всего собрано',
     'support.note': 'Адреса только для донатов. Токен $FILB пока не выпущен — будьте осторожны с мошенниками.',
     'support.telegram': 'Telegram канал',
     'support.twitter': 'Twitter/X',
@@ -475,6 +476,7 @@ const translations = {
     'support.goal1': 'Hosting & Infrastructure',
     'support.goal2': 'Pump.fun Listing',
     'support.goal3': 'Marketing & Audit',
+    'support.totalRaised': 'Total Raised',
     'support.note': 'Addresses for donations only. $FILB token not launched yet — beware of scammers.',
     'support.telegram': 'Telegram Channel',
     'support.twitter': 'Twitter/X',
@@ -916,6 +918,27 @@ function SupportModal({ isOpen, onClose, t, donations, onDonate }) {
         
         <div className="support-goals">
           <div className="support-goal">
+            <span className="support-goal-label">{t('support.goal1')}</span>
+            <div className="support-goal-progress">
+              <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'12%'}}></div></div>
+              <span className="support-goal-amount">12%</span>
+            </div>
+          </div>
+          <div className="support-goal">
+            <span className="support-goal-label">{t('support.goal2')}</span>
+            <div className="support-goal-progress">
+              <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'5%'}}></div></div>
+              <span className="support-goal-amount">5%</span>
+            </div>
+          </div>
+          <div className="support-goal">
+            <span className="support-goal-label">{t('support.goal3')}</span>
+            <div className="support-goal-progress">
+              <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'3%'}}></div></div>
+              <span className="support-goal-amount">3%</span>
+            </div>
+          </div>
+          <div className="support-goal" style={{borderTop:'1px solid var(--border)',paddingTop:'12px',marginTop:'4px'}}>
             <span className="support-goal-label">{t('support.totalRaised')}</span>
             <span className="support-goal-amount">{donations.reduce((s, d) => s + parseFloat(d.amount), 0).toFixed(4)} SOL</span>
           </div>

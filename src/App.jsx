@@ -190,9 +190,8 @@ const translations = {
     'auth.country': 'Страна',
     'support.title': 'Поддержать FilBank',
     'support.subtitle': 'Помоги нам запустить токен $FILB и развить экосистему. Любая сумма — вклад в будущее.',
-    'support.goal1': 'Хостинг и инфраструктура',
     'support.goal2': 'Листинг на Pump.fun',
-    'support.goal3': 'Маркетинг и аудит',
+    'support.goal3': 'Оборудование и софт',
     'support.totalRaised': 'Всего собрано',
     'support.note': 'Адреса только для донатов. Токен $FILB пока не выпущен — будьте осторожны с мошенниками.',
     'support.telegram': 'Telegram канал',
@@ -475,7 +474,7 @@ const translations = {
     'support.subtitle': 'Help us launch $FILB token and grow the ecosystem. Every contribution counts.',
     'support.goal1': 'Hosting & Infrastructure',
     'support.goal2': 'Pump.fun Listing',
-    'support.goal3': 'Marketing & Audit',
+    'support.goal3': 'Equipment & Software',
     'support.totalRaised': 'Total Raised',
     'support.note': 'Addresses for donations only. $FILB token not launched yet — beware of scammers.',
     'support.telegram': 'Telegram Channel',
@@ -965,47 +964,38 @@ function DonationVault({ t, donations }) {
     <section id="support" className="partners-section" style={{borderTop:'1px solid var(--border)',paddingTop:'60px',position:'relative',overflow:'hidden'}}>
       <canvas ref={canvasRef} className="particles" style={{opacity:0.3}} />
       <div className="section-header" style={{position:'relative',zIndex:1}}>
-        <div className="vault-badge">🏦</div>
+        <div className="donate-badge">💎</div>
         <h2>{t('support.title')}</h2>
         <p>{t('support.subtitle')}</p>
       </div>
 
-      {/* 3D Vault */}
+      {/* 3D Sphere */}
       <div style={{display:'flex',justifyContent:'center',margin:'0 auto 40px',position:'relative',zIndex:1}}>
-        <div className="vault-3d">
-          <div className="vault-front">
-            <div className="vault-circle">
-              <span className="vault-dollar">$</span>
-            </div>
-            <div className="vault-handle"></div>
-            <div className="vault-bolts">
-              <span></span><span></span><span></span><span></span>
-            </div>
+        <div className="sphere-3d">
+          <div className="sphere-globe">
+            <div className="sphere-glow-inner"></div>
+            <div className="sphere-grid"></div>
+            <div className="sphere-ring sphere-ring-1"></div>
+            <div className="sphere-ring sphere-ring-2"></div>
+            <div className="sphere-ring sphere-ring-3"></div>
+            <div className="sphere-center-icon">🪙</div>
+            {rain.map(c => (
+              <div key={c.id} className="coin-rain"
+                style={{
+                  left: `${c.x}%`,
+                  fontSize: c.size + 'px',
+                  animationDelay: c.delay + 's',
+                  '--drift': c.drift + 'px'
+                }}
+              >🪙</div>
+            ))}
+            {floaters.map(f => (
+              <div key={f.id} className="donor-floater">
+                <span className="floater-name">{f.name}</span>
+                <span className="floater-amount">+{f.amount} SOL</span>
+              </div>
+            ))}
           </div>
-          <div className="vault-side"></div>
-          <div className="vault-top"></div>
-          <div className="vault-glow"></div>
-          {/* Coin rain */}
-          {rain.map(c => (
-            <div key={c.id} className="coin-rain"
-              style={{
-                left: `${c.x}%`,
-                width: c.size + 'px',
-                height: c.size + 'px',
-                animationDelay: c.delay + 's',
-                '--drift': c.drift + 'px'
-              }}
-            >🪙</div>
-          ))}
-          {/* Floaters */}
-          {floaters.map(f => (
-            <div key={f.id} className="donor-floater"
-              style={{ left: `${f.x}%` }}
-            >
-              <span className="floater-name">{f.name}</span>
-              <span className="floater-amount">+{f.amount} SOL</span>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -1017,13 +1007,6 @@ function DonationVault({ t, donations }) {
 
       {/* Goals */}
       <div style={{maxWidth:400,margin:'0 auto 30px',position:'relative',zIndex:1}}>
-        <div className="support-goal" style={{marginBottom:8}}>
-          <span className="support-goal-label">{t('support.goal1')}</span>
-          <div className="support-goal-progress">
-            <div className="support-progress-bar"><div className="support-progress-fill" style={{width:'12%'}}></div></div>
-            <span className="support-goal-amount">12%</span>
-          </div>
-        </div>
         <div className="support-goal" style={{marginBottom:8}}>
           <span className="support-goal-label">{t('support.goal2')}</span>
           <div className="support-goal-progress">

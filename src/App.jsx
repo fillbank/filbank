@@ -1673,9 +1673,18 @@ function WalletSelectModal({ onClose, onSelect, t }) {
   const [connecting, setConnecting] = useState(null)
   const handleConnect = async (wl) => {
     if (IS_MOBILE) {
+      const provider = getWalletProvider(wl.id)
+      if (provider) {
+        setConnecting(wl.id)
+        try { await onSelect({ id: wl.id, name: wl.name, icon: wl.icon, provider }) } catch {}
+        setConnecting(null)
+        return
+      }
       setConnecting(wl.id)
-      navigator.clipboard.writeText(window.location.href)
-      setConnecting(null)
+      const url = encodeURIComponent(window.location.href)
+      if (wl.id === 'phantom') { window.location.href = 'https://phantom.app/ul/browse?dapp_url=' + url; return }
+      if (wl.id === 'solflare') { window.location.href = 'https://solflare.com/ul/' + url; return }
+      window.open(wl.url, '_blank')
       return
     }
     const provider = getWalletProvider(wl.id)
@@ -1691,40 +1700,21 @@ function WalletSelectModal({ onClose, onSelect, t }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal wallet-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>✕</button>
-        {IS_MOBILE ? (
-          <>
-            <h3 className="modal-title">📱 Подключение на телефоне</h3>
-            <div className="mobile-wallet-info">
-              <p>На телефоне кошелёк подключается через встроенный браузер приложения:</p>
-              <div className="mobile-wallet-steps">
-                <div className="mobile-wallet-step"><span className="mws-num">1</span> Скопируй URL сайта (кнопка ниже)</div>
-                <div className="mobile-wallet-step"><span className="mws-num">2</span> Открой Phantom / Solflare</div>
-                <div className="mobile-wallet-step"><span className="mws-num">3</span> В браузере приложения вставь URL</div>
-                <div className="mobile-wallet-step"><span className="mws-num">4</span> Нажми «Connect Wallet» — всё работает!</div>
-              </div>
-              <button className="btn-copy" onClick={() => { navigator.clipboard.writeText(window.location.href); alert('✅ URL скопирован!') }}>📋 Копировать URL сайта</button>
-              <div className="mobile-wallet-icons">
-                <span onClick={() => window.open('https://phantom.app', '_blank')}>👻 Phantom</span>
-                <span onClick={() => window.open('https://solflare.com', '_blank')}>🔥 Solflare</span>
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <h3 className="modal-title">{t('wallet.select')}</h3>
-            <div className="wallet-list">
-              {WALLET_LIST.map((wl) => {
-                const ok = !!getWalletProvider(wl.id)
-                return (
-                  <button key={wl.id} className="wallet-option" onClick={() => handleConnect(wl)} disabled={connecting === wl.id}>
-                    <span className="wallet-icon">{wl.icon}</span>
-                    <span className="wallet-name">{wl.name}</span>
-                    {!ok && <span className="wallet-tag get">↗</span>}
-                  </button>
-                )
-              })}
-            </div>
-          </>
+        <h3 className="modal-title">{t('wallet.select')}</h3>
+        <div className="wallet-list">
+          {WALLET_LIST.map((wl) => {
+            const ok = !!getWalletProvider(wl.id)
+            return (
+              <button key={wl.id} className="wallet-option" onClick={() => handleConnect(wl)} disabled={connecting === wl.id}>
+                <span className="wallet-icon">{wl.icon}</span>
+                <span className="wallet-name">{wl.name}</span>
+                {!ok && !IS_MOBILE && <span className="wallet-tag get">↗</span>}
+              </button>
+            )
+          })}
+        </div>
+        {IS_MOBILE && !getWalletProvider('phantom') && !getWalletProvider('solflare') && (
+          <p className="wallet-hint">Нажми на кошелёк — откроется браузер приложения с этим сайтом. Там нажми «Connect Wallet»</p>
         )}
       </div>
     </div>

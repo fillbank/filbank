@@ -653,52 +653,6 @@ function getWalletProvider(id) {
   } catch { return null }
 }
 
-const WALLET_WC_URI = {
-  phantom: (uri) => `phantom://wc?uri=${encodeURIComponent(uri)}`,
-  solflare: (uri) => `solflare://wc?uri=${encodeURIComponent(uri)}`,
-  backpack: (uri) => `backpack://wc?uri=${encodeURIComponent(uri)}`,
-}
-
-let wcClient = null
-async function getSignClient() {
-  if (wcClient) return wcClient
-  const { SignClient } = await import('@walletconnect/sign-client')
-  wcClient = await SignClient.init({ projectId: '4e7c5fe0ab68faaeb8267cc324f5e781' })
-  return wcClient
-}
-
-async function connectViaWalletConnect(wallet) {
-  try {
-    const client = await getSignClient()
-    const { uri, approval } = await client.connect({
-      requiredNamespaces: {
-        solana: {
-          methods: ['signMessage', 'signTransaction', 'signAndSendTransaction'],
-          chains: ['solana:mainnet-beta'],
-          events: ['chainChanged', 'accountsChanged'],
-        },
-      },
-    })
-    if (!uri) { throw new Error('No URI') }
-    const deepLink = WALLET_WC_URI[wallet.id]
-    if (deepLink) {
-      window.open(deepLink(uri), '_blank')
-    } else {
-      window.open(`https://${wallet.id}.app/wc?uri=${encodeURIComponent(uri)}`, '_blank')
-    }
-    const session = await approval
-    const account = session.namespaces.solana?.accounts?.[0]
-    if (!account) throw new Error('No account')
-    const address = account.split(':')[2]
-    const pubKey = new PublicKey(address)
-    const bal = await connection.getBalance(pubKey)
-    return { publicKey: pubKey, wallet: { id: wallet.id, name: wallet.name, icon: wallet.icon, isWC: true }, balance: (bal / 1e9).toFixed(4) }
-  } catch (e) {
-    console.error('WC connect error:', e)
-    return null
-  }
-}
-
 const Particles = memo(function Particles() {
   const canvasRef = useRef(null)
   useEffect(() => {
@@ -2140,15 +2094,13 @@ function App() {
     setConnecting(true)
     try {
       if (IS_MOBILE) {
-        const result = await connectViaWalletConnect(wallet)
-        if (result) {
-          setPublicKey(result.publicKey)
-          setActiveWallet(result.wallet)
-          setBalance(result.balance)
-          localStorage.setItem('filbank-wallet', result.wallet.id)
-          localStorage.setItem('filbank-pubkey', result.publicKey.toBase58())
-          setShowWalletModal(false)
+        const browseUrl = wallet.id === 'phantom' ? 'https://phantom.app/ul/browse?dapp_url=' : wallet.id === 'solflare' ? 'https://solflare.com/ul/' : null
+        if (browseUrl) {
+          window.open(browseUrl + encodeURIComponent(window.location.href), '_blank')
+        } else {
+          alert('Открой этот сайт в браузере кошелька ' + wallet.name)
         }
+        setConnecting(false)
         return
       }
       if (!wallet.provider) { alert(t('wallet.install')); setConnecting(false); return }

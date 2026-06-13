@@ -1586,21 +1586,24 @@ function AuthModal({ mode, onClose, onSwitch, onAuth, t }) {
     if (!email || !pass) { setError('Заполните все поля'); return }
     if (pass.length < 6) { setError(t('auth.shortPass')); return }
     setLoading(true)
-    const usersSnap = await get(child(ref(db), 'users'))
-    const users = usersSnap.val() || {}
-    if (mode === 'register') {
-      if (pass !== confirm) { setError(t('auth.passMismatch')); setLoading(false); return }
-      if (users[email]) { setError(t('auth.emailExists')); setLoading(false); return }
-      if (!country) { setError(t('auth.country') === 'Country' ? 'Выберите страну' : 'Select a country'); setLoading(false); return }
-      const newUser = { email, username: email.split('@')[0], passwordHash: hash(pass), country, createdAt: Date.now() }
-      users[email] = newUser
-      await set(ref(db, 'users'), users)
-      onAuth({ email, username: email.split('@')[0], country })
-    } else {
-      const user = users[email]
-      if (!user) { setError(t('auth.userNotFound')); setLoading(false); return }
-      if (user.passwordHash !== hash(pass)) { setError(t('auth.wrongPass')); setLoading(false); return }
-      onAuth({ email, username: user.username })
+    try {
+      const userRef = ref(db, 'users/' + email.replace(/\./g, ','))
+      const userSnap = await get(userRef)
+      if (mode === 'register') {
+        if (pass !== confirm) { setError(t('auth.passMismatch')); setLoading(false); return }
+        if (userSnap.exists()) { setError(t('auth.emailExists')); setLoading(false); return }
+        if (!country) { setError(t('auth.country') === 'Country' ? 'Выберите страну' : 'Select a country'); setLoading(false); return }
+        const newUser = { email, username: email.split('@')[0], passwordHash: hash(pass), country, createdAt: Date.now() }
+        await set(userRef, newUser)
+        onAuth({ email, username: email.split('@')[0], country })
+      } else {
+        const user = userSnap.val()
+        if (!user) { setError(t('auth.userNotFound')); setLoading(false); return }
+        if (user.passwordHash !== hash(pass)) { setError(t('auth.wrongPass')); setLoading(false); return }
+        onAuth({ email, username: user.username })
+      }
+    } catch (e) {
+      setError('Ошибка: ' + e.message)
     }
     setLoading(false)
   }
@@ -1915,9 +1918,11 @@ function App() {
       const updated = { ...currentUser, username: name }
       setCurrentUser(updated)
       localStorage.setItem('filbank-current-user', JSON.stringify(updated))
-      const usersSnap = await get(child(ref(db), 'users'))
-      const users = usersSnap.val() || {}
-      if (users[currentUser.email]) { users[currentUser.email].username = name; await set(ref(db, 'users'), users) }
+      const userRef = ref(db, 'users/' + currentUser.email.replace(/\./g, ','))
+      const userSnap = await get(userRef)
+      if (userSnap.exists()) {
+        await set(userRef, { ...userSnap.val(), username: name })
+      }
     }
   }
 

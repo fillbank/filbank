@@ -17,7 +17,9 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig)
 const db = getDatabase(fbApp)
 
-const connection = new Connection(clusterApiUrl('devnet'))
+const connection = new Connection('https://api.mainnet-beta.solana.com')
+const DONATION_ADDRESS_SOL = '7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF'
+const DONATION_ADDRESS_USDT = 'ETkmY37T9tKmwNzxLrNrLh6GdphDEDAB6qWfdywEGf8p'
 
 const translations = {
   ru: {
@@ -1036,6 +1038,14 @@ function DonationVault({ t, donations }) {
               {hoveredAddress === '7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF' ? '✓' : '📋'}
             </button>
           </div>
+          <div style={{display:'flex',gap:8,marginTop:10}}>
+            <button className="support-donate-btn btn-primary" onClick={() => { window.open('https://phantom.app/ul/v1/transfer?recipient=7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF&amount=0.1', '_blank') }} style={{flex:1,fontSize:13,padding:'10px 16px'}}>
+              👻 Phantom
+            </button>
+            <button className="support-donate-btn btn-primary" onClick={() => { window.open('https://solflare.com/ul/transfer?recipient=7xK4f2vL9mN3pQ8rT5wY7uI1oP6aS9dF&amount=0.1', '_blank') }} style={{flex:1,fontSize:13,padding:'10px 16px',background:'linear-gradient(135deg,#FF9338,#e67e22)'}}>
+              🔥 Solflare
+            </button>
+          </div>
         </div>
         <div className="support-address">
           <div className="support-address-header">
@@ -1669,6 +1679,13 @@ function PartnerForm({ onSubmit, t }) {
 function WalletSelectModal({ onClose, onSelect, t }) {
   const [connecting, setConnecting] = useState(null)
   const handleConnect = async (wl) => {
+    if (IS_MOBILE) {
+      const dl = WALLET_DEEP_LINKS.find(w => w.id === wl.id)
+      if (dl) {
+        window.location.href = dl.scheme + encodeURIComponent(window.location.href)
+        return
+      }
+    }
     const provider = getWalletProvider(wl.id)
     if (provider) {
       setConnecting(wl.id)
@@ -2006,6 +2023,35 @@ function App() {
   useEffect(() => {
     set(ref(db, 'partnerRequests'), partnerRequests)
   }, [partnerRequests])
+
+  // Auto-scan SOL donations from blockchain
+  const checkedTx = useRef(new Set())
+  useEffect(() => {
+    const scan = async () => {
+      try {
+        const addr = new PublicKey(DONATION_ADDRESS_SOL)
+        const sigs = await connection.getSignaturesForAddress(addr, { limit: 10 })
+        for (const sig of sigs) {
+          if (checkedTx.current.has(sig.signature)) continue
+          checkedTx.current.add(sig.signature)
+          const tx = await connection.getParsedTransaction(sig.signature, { maxSupportedTransactionVersion: 0 })
+          if (!tx?.meta) continue
+          const pre = tx.meta.preBalances[0], post = tx.meta.postBalances[0]
+          const change = (pre - post) / 1e9
+          if (change > 0) {
+            const sender = tx.transaction.message.accountKeys[0].pubkey.toBase58()
+            setSupportDonations(prev => {
+              if (prev.some(d => d.txId === sig.signature)) return prev
+              return [...prev, { type: 'SOL', amount: change.toFixed(4), txId: sig.signature, timestamp: sig.blockTime * 1000 || Date.now(), sender }]
+            })
+          }
+        }
+      } catch {}
+    }
+    scan()
+    const interval = setInterval(scan, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   // Admin panel hotkey: Ctrl+Shift+A
   useEffect(() => {
